@@ -1,1 +1,1 @@
-go build -o supress main.go
+go build -o supress main.go filters.go
