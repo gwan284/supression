@@ -1,12 +1,11 @@
-package main
+package supress
 
 import (
 	"regexp"
-	"bufio"
-	"os"
-	"log"
 	"sync"
+	"fmt"
 )
+const splittersNum = 5
 
 var md5Regex = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
@@ -15,33 +14,49 @@ type multiMap map[string][]string
 type filters struct {
 	emails multiMap
 	md5s   multiMap
+	md5Enabled bool
 }
 
-func parseFilters(files []string) *filters {
+func ParseFilters(files []string) *filters {
 	var f = &filters {
-		emails : make(multiMap),
-		md5s   : make(multiMap),
+		emails     : make(multiMap),
+		md5s       : make(multiMap),
+		md5Enabled : false,
 	}
 
 	for _, n := range files {
 		parseFilter(n, f)
 	}
+	f.md5Enabled = len(f.md5s) != 0
+
+
+
+	num:=0
+	for _, v := range f.emails {
+		num += len(v)
+	}
+	fmt.Printf("%d emails filter in %d buckets\n", num, len(f.emails))
+
+	num=0
+	for _, v := range f.md5s {
+		num += len(v)
+	}
+	fmt.Printf("%d dm5s filter in %d buckets\n", num, len(f.md5s))
 
 	return f
 }
 
 func parseFilter(file string, f* filters) {
 	//run reader that will produce chunks to next pipeline consumer
-	lines := read(file)
+	lines := stream(file)
 
 	emails := make(chan string, 10000)
 	md5s := make(chan string, 10000)
-	//run 5 classifiers
-	const classifiersNum = 5
+	//run classifiers
 	var wg sync.WaitGroup
-	wg.Add(classifiersNum)
-	for w := 0; w < classifiersNum; w++ {
-		go classify(lines, emails, md5s, &wg)
+	wg.Add(splittersNum)
+	for w := 0; w < splittersNum; w++ {
+		go split(lines, emails, md5s, &wg)
 	}
 	go func() {
 		wg.Wait()
@@ -56,26 +71,7 @@ func parseFilter(file string, f* filters) {
 	fill(f, emails, md5s)
 }
 
-func read(file string) <-chan string {
-	lines := make(chan string, 10000)
-	go func() {
-		f, err := os.Open(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
-
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			lines <- scanner.Text()
-		}
-		close(lines)
-	}()
-
-	return lines
-}
-
-func classify(lines <-chan string, emails, md5s chan<- string, wg *sync.WaitGroup) {
+func split(lines <-chan string, emails, md5s chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for l := range lines {
 		if md5Regex.MatchString(l) {
@@ -93,8 +89,7 @@ func fill(f* filters, emails, md5s <-chan string) {
 		defer wg.Done()
 		for d := range data {
 			k := d[0:2]
-			entry := (*mm)[k]
-			(*mm)[k] = append(entry, d)
+			(*mm)[k] = append((*mm)[k], d)
 		}
 	}
 
