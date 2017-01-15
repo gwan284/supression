@@ -11,7 +11,7 @@ var emailRegex = regexp.MustCompile(`^(\w[-._\w]*\w@\w[-._\w]*\w\.\w{2,3})$`)
 
 const classifiersNum = 10
 
-func ProcessInput(file string, f*filters) {
+func ProcessInput(file string, f *filters) {
 	lines := stream(file)
 
 	matches, clean, bad := classify(lines, f)
@@ -41,11 +41,11 @@ func classify(ls <-chan string, f *filters) (<-chan string, <-chan string, <-cha
 	return matches, clean, bad
 }
 
-func runClassifier(ls <-chan string, f *filters, m, c, b chan<- string, wg *sync.WaitGroup) {
+func runClassifier(ls <-chan string, f *filters, m, c, b chan <- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	matchesFilter := func(l string, m multiMap) bool {
-		if v, ok := m[l[0:2]]; ok {
+	matchesFilter := func(l string, m multiMap, kLength int) bool {
+		if v, ok := m[l[0:kLength]]; ok {
 			return contains(v, l)
 		}
 		return false
@@ -55,24 +55,20 @@ func runClassifier(ls <-chan string, f *filters, m, c, b chan<- string, wg *sync
 		md5 := md5.Sum([]byte(l))
 		md5str := hex.EncodeToString(md5[:])
 
-		return matchesFilter(md5str, m)
+		return matchesFilter(md5str, m, md5KeyLength)
 	}
 
 	for l := range ls {
-		//if not is_valid_mail
-		//send to bad
+		//if not is_valid_mail send to bad
 		if !emailRegex.MatchString(l) {
 			b <- l
-		//else if exists_in_filters
-		//send to matches
-		} else if matchesFilter(l, f.emails) {
+			//if exists_in_filters send to matches
+		} else if matchesFilter(l, f.emails, emailKeyLength) {
 			m <- l
-		//else if calculate md5 exists_in_filters
-		//send to matches
-		} else if  f.md5Enabled && matchesMd5(l, f.md5s) {
+			//if calculate md5 exists_in_filters send to matches
+		} else if f.md5Enabled && matchesMd5(l, f.md5s) {
 			m <- l
-		// if non of above
-		// send to clean
+			// if non of above send to clean
 		} else {
 			c <- l
 		}

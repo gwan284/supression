@@ -3,22 +3,26 @@ package supress
 import (
 	"regexp"
 	"sync"
-	"fmt"
 )
-const splittersNum = 5
+
+const (
+	splittersNum = 5
+	emailKeyLength = 2
+	md5KeyLength = 3
+)
 
 var md5Regex = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 type multiMap map[string][]string
 
 type filters struct {
-	emails multiMap
-	md5s   multiMap
+	emails     multiMap
+	md5s       multiMap
 	md5Enabled bool
 }
 
 func ParseFilters(files []string) *filters {
-	var f = &filters {
+	var f = &filters{
 		emails     : make(multiMap),
 		md5s       : make(multiMap),
 		md5Enabled : false,
@@ -29,24 +33,10 @@ func ParseFilters(files []string) *filters {
 	}
 	f.md5Enabled = len(f.md5s) != 0
 
-
-
-	num:=0
-	for _, v := range f.emails {
-		num += len(v)
-	}
-	fmt.Printf("%d emails filter in %d buckets\n", num, len(f.emails))
-
-	num=0
-	for _, v := range f.md5s {
-		num += len(v)
-	}
-	fmt.Printf("%d dm5s filter in %d buckets\n", num, len(f.md5s))
-
 	return f
 }
 
-func parseFilter(file string, f* filters) {
+func parseFilter(file string, f*filters) {
 	//run reader that will produce chunks to next pipeline consumer
 	lines := stream(file)
 
@@ -71,7 +61,7 @@ func parseFilter(file string, f* filters) {
 	fill(f, emails, md5s)
 }
 
-func split(lines <-chan string, emails, md5s chan<- string, wg *sync.WaitGroup) {
+func split(lines <-chan string, emails, md5s chan <- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for l := range lines {
 		if md5Regex.MatchString(l) {
@@ -82,20 +72,20 @@ func split(lines <-chan string, emails, md5s chan<- string, wg *sync.WaitGroup) 
 	}
 }
 
-func fill(f* filters, emails, md5s <-chan string) {
+func fill(f*filters, emails, md5s <-chan string) {
 	var wg sync.WaitGroup
 
-	fillMap := func(mm* multiMap, data <-chan string) {
+	fillMap := func(mm*multiMap, kLength int, data <-chan string) {
 		defer wg.Done()
 		for d := range data {
-			k := d[0:2]
+			k := d[0:kLength]
 			(*mm)[k] = append((*mm)[k], d)
 		}
 	}
 
 	wg.Add(2)
-	go fillMap(&f.emails, emails)
-	go fillMap(&f.md5s, md5s)
+	go fillMap(&f.emails, emailKeyLength, emails)
+	go fillMap(&f.md5s, md5KeyLength, md5s)
 
 	wg.Wait()
 }
