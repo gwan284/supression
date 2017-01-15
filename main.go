@@ -20,10 +20,16 @@ func main() {
 		`C:\supp\plaintxt1`,
 	}
 
-	start := time.Now()
-	filters := supress.ParseFilters(files);
+	input := `C:\supp\emailfile`
 
-	fmt.Println("Filters build took ", time.Since(start).Nanoseconds(), &filters)
+	start := time.Now()
+	fs := supress.ParseFilters(files);
+	end := time.Now()
+	fmt.Println("Filters build took ", time.Since(start).Seconds())
+
+	supress.ProcessInput(input, fs);
+
+	fmt.Println("Sorting input according filter took ", time.Since(end).Seconds())
 
 
 	// parse flags
@@ -32,19 +38,6 @@ func main() {
 	//print usage
 
 	//ffs :=  strings.Fields(filterFiles)
-
-	// for each email in emails
-		//run filter:
-			//if not is_valid_mail
-				//add to bad
-			//else if exists_in_filters
-				//add to matches
-			//else if calculate md5 exists_in_filters
-				//add to matches
-			//else
-				//add to clean
-
-	// dump collected results using buffers.
 }
 
 func parseFlags() bool {

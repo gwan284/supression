@@ -9,9 +9,9 @@ import (
 
 var emailRegex = regexp.MustCompile(`^(\w[-._\w]*\w@\w[-._\w]*\w\.\w{2,3})$`)
 
-const classifiersNum = 5
+const classifiersNum = 10
 
-func processInput(file string, f*filters) {
+func ProcessInput(file string, f*filters) {
 	lines := stream(file)
 
 	matches, clean, bad := classify(lines, f)
