@@ -7,8 +7,7 @@ import (
 
 const (
 	splittersNum = 5
-	emailKeyLength = 2
-	md5KeyLength = 3
+	keyLength = 3
 )
 
 var md5Regex = regexp.MustCompile(`^[a-f0-9]{32}$`)
@@ -21,6 +20,8 @@ type filters struct {
 	md5Enabled bool
 }
 
+// reads filter files provided splits to md5 and emails and
+// returns filter struct
 func ParseFilters(files []string) *filters {
 	var f = &filters{
 		emails     : make(multiMap),
@@ -75,17 +76,17 @@ func split(lines <-chan string, emails, md5s chan <- string, wg *sync.WaitGroup)
 func fill(f*filters, emails, md5s <-chan string) {
 	var wg sync.WaitGroup
 
-	fillMap := func(mm*multiMap, kLength int, data <-chan string) {
+	fillMap := func(mm*multiMap, data <-chan string) {
 		defer wg.Done()
 		for d := range data {
-			k := d[0:kLength]
+			k := d[0:keyLength]
 			(*mm)[k] = append((*mm)[k], d)
 		}
 	}
 
 	wg.Add(2)
-	go fillMap(&f.emails, emailKeyLength, emails)
-	go fillMap(&f.md5s, md5KeyLength, md5s)
+	go fillMap(&f.emails, emails)
+	go fillMap(&f.md5s, md5s)
 
 	wg.Wait()
 }

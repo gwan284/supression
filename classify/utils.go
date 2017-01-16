@@ -26,7 +26,7 @@ func stream(file string) <-chan string {
 	return lines
 }
 
-func write(file string, lines <-chan string, wg *sync.WaitGroup) {
+func write(file string, lines <-chan string, wg *sync.WaitGroup, counter *int) {
 	defer wg.Done()
 
 	f, err := os.OpenFile(file, os.O_CREATE | os.O_WRONLY, os.ModeAppend)
@@ -36,6 +36,7 @@ func write(file string, lines <-chan string, wg *sync.WaitGroup) {
 	defer f.Close()
 	for l := range lines {
 		_, err := f.WriteString(l + "\n")
+		(*counter)++
 		if err != nil {
 			log.Fatal(err)
 		}
