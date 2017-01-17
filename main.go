@@ -54,7 +54,7 @@ func main() {
 		logger.Fatalln("No valid filters provided. Finishing...")
 	}
 
-	logger.Print("Suppression started. Creating filters...")
+	logger.Printf("Suppression on %s started. Creating filters...", optionInput)
 
 	filter := supress.ParseFilters(filterFiles);
 	logger.Print("Done. Starting input classification...")
@@ -75,7 +75,7 @@ func parseFlags() {
 }
 
 func setOutput(l *log.Logger) {
-	logfile, err := os.Create(filenameLog)
+	logfile, err := os.OpenFile(filenameLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666);
 	if err != nil {
 		defer l.Printf("Failed to create log file: %s", err.Error())
 	}
